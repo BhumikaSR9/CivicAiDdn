@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: civicai_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: civicai
+      POSTGRES_PASSWORD: civicai_secret_password
+      POSTGRES_DB: civicai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: civicai_api
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://civicai:civicai_secret_password@db:5432/civicai
+      SECRET_KEY: civicai_prod_secret_key_change_in_production
+      CORS_ORIGINS: '["http://localhost", "http://localhost:3000", "http://localhost:80"]'
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/backend/uploads
+    depends_on:
+      - db
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: civicai_web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  uploads_data:
